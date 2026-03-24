@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  sport-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8100:80"
+    restart: unless-stopped
+    networks:
+      - sport-app-network
+
+networks:
+  sport-app-network:
+    name: sport-app-network
