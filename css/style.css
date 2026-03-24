@@ -728,6 +728,16 @@ textarea { resize: vertical; min-height: 64px; }
 /* ─── Datalist ───────────────────────────────────────────────────────────── */
 datalist { display: none; }
 
+/* ─── Loader ─────────────────────────────────────────────────────────────── */
+.loader {
+  width: 40px; height: 40px;
+  border: 3px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
 /* ─── Scrollbar ──────────────────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }

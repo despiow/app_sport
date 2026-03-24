@@ -134,7 +134,7 @@ export function initWeight() {
     document.getElementById('modal-weight').style.display = 'flex';
   });
 
-  document.getElementById('form-weight')?.addEventListener('submit', e => {
+  document.getElementById('form-weight')?.addEventListener('submit', async e => {
     e.preventDefault();
     const entry = {
       id: DB.uid(),
@@ -142,7 +142,7 @@ export function initWeight() {
       weight: parseFloat(document.getElementById('wt-weight').value),
       note: document.getElementById('wt-note').value
     };
-    DB.addWeight(entry);
+    await DB.addWeight(entry);
     document.getElementById('modal-weight').style.display = 'none';
     refreshWeightPage();
   });
@@ -257,9 +257,9 @@ function drawChart(days) {
   });
 }
 
-window.deleteWeight = function(id) {
+window.deleteWeight = async function(id) {
   if (confirm('Supprimer cette entrée ?')) {
-    DB.deleteWeight(id);
+    await DB.deleteWeight(id);
     refreshWeightPage();
   }
 };

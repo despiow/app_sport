@@ -201,7 +201,7 @@ export function initProfile() {
     document.getElementById(id)?.addEventListener('change', updateResults);
   });
 
-  document.getElementById('form-profile')?.addEventListener('submit', e => {
+  document.getElementById('form-profile')?.addEventListener('submit', async e => {
     e.preventDefault();
     const profile = {
       name: document.getElementById('p-name').value,
@@ -212,7 +212,7 @@ export function initProfile() {
       activityLevel: document.getElementById('p-activity').value,
       goal: document.getElementById('p-goal').value
     };
-    DB.saveProfile(profile);
+    await DB.saveProfile(profile);
     showToast('Profil enregistré !');
     updateResults();
   });

@@ -244,9 +244,9 @@ window.closeWorkoutModal = function() {
 
 window.editWorkout = function(id) { openWorkoutModal(id); };
 
-window.deleteWorkoutConfirm = function(id) {
+window.deleteWorkoutConfirm = async function(id) {
   if (confirm('Supprimer cette séance ?')) {
-    DB.deleteWorkout(id);
+    await DB.deleteWorkout(id);
     document.getElementById('workout-list-container').innerHTML = renderWorkoutList(DB.getWorkouts());
   }
 };
@@ -342,7 +342,7 @@ window.renumberSets = function(exId) {
   document.querySelectorAll(`#sets-${exId} .set-num`).forEach((el, i) => el.textContent = `S${i+1}`);
 };
 
-function saveWorkoutForm() {
+async function saveWorkoutForm() {
   const id = document.getElementById('wf-id').value || DB.uid();
   const exercises = [];
 
@@ -371,7 +371,7 @@ function saveWorkoutForm() {
     exercises
   };
 
-  DB.saveWorkout(workout);
+  await DB.saveWorkout(workout);
   closeWorkoutModal();
 
   // Refresh list

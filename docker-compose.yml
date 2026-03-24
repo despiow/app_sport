@@ -8,5 +8,12 @@ services:
     image: app_sport:latest
     ports:
       - "8100:80"
+    environment:
+      - DB_HOST=${DB_HOST:-bdd.despiow.fr}
+      - DB_PORT=${DB_PORT:-3306}
+      - DB_NAME=${DB_NAME:-sport_app}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - PORT=4000
     restart: unless-stopped
     network_mode: bridge

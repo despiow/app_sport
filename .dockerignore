@@ -1,6 +1,8 @@
 .git
 .gitignore
 .dockerignore
+server/node_modules/
+server/.env
 *.log
 *.tmp
 .DS_Store

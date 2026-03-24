@@ -32,6 +32,7 @@ const FOOD_DB = [
 
 export function renderDiet() {
   const today = DB.today();
+  const day = DB.getDietDay(today);
   return `
     <div class="page" id="page-diet">
       <div class="page-header">
@@ -39,7 +40,7 @@ export function renderDiet() {
         <input type="date" id="diet-date" value="${today}" class="date-picker">
       </div>
       <div id="diet-day-content">
-        ${renderDietDay(today)}
+        ${renderDietDay(today, day)}
       </div>
     </div>
 
@@ -97,8 +98,8 @@ export function renderDiet() {
   `;
 }
 
-function renderDietDay(date) {
-  const day = DB.getDietDay(date);
+function renderDietDay(date, day) {
+  day = day || DB.getDietDay(date);
   const profile = DB.getProfile();
   const targets = calcTargets(profile);
 
@@ -190,8 +191,10 @@ function calcTargets(profile) {
 }
 
 export function initDiet() {
-  document.getElementById('diet-date')?.addEventListener('change', e => {
-    document.getElementById('diet-day-content').innerHTML = renderDietDay(e.target.value);
+  document.getElementById('diet-date')?.addEventListener('change', async e => {
+    const date = e.target.value;
+    const day = await DB.fetchDietDay(date);
+    document.getElementById('diet-day-content').innerHTML = renderDietDay(date, day);
   });
 
   document.getElementById('food-search')?.addEventListener('input', e => {
@@ -207,7 +210,7 @@ export function initDiet() {
     `).join('');
   });
 
-  document.getElementById('form-food')?.addEventListener('submit', e => {
+  document.getElementById('form-food')?.addEventListener('submit', async e => {
     e.preventDefault();
     const meal = document.getElementById('ff-meal').value;
     const date = document.getElementById('ff-date').value;
@@ -221,9 +224,9 @@ export function initDiet() {
     };
     const day = DB.getDietDay(date);
     day.meals[meal].push(food);
-    DB.saveDietDay(date, day);
+    await DB.saveDietDay(date, day);
     document.getElementById('modal-food').style.display = 'none';
-    document.getElementById('diet-day-content').innerHTML = renderDietDay(date);
+    document.getElementById('diet-day-content').innerHTML = renderDietDay(date, day);
   });
 }
 
@@ -251,9 +254,9 @@ window.selectFoodSuggestion = function(food) {
   document.getElementById('food-suggestions').innerHTML = '';
 };
 
-window.removeFood = function(meal, date, idx) {
+window.removeFood = async function(meal, date, idx) {
   const day = DB.getDietDay(date);
   day.meals[meal].splice(idx, 1);
-  DB.saveDietDay(date, day);
-  document.getElementById('diet-day-content').innerHTML = renderDietDay(date);
+  await DB.saveDietDay(date, day);
+  document.getElementById('diet-day-content').innerHTML = renderDietDay(date, day);
 };
