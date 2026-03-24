@@ -9,3 +9,4 @@ services:
     ports:
       - "8100:80"
     restart: unless-stopped
+    network_mode: bridge
