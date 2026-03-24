@@ -5,6 +5,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    image: app_sport:latest
     ports:
       - "8100:80"
     restart: unless-stopped
