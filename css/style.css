@@ -45,7 +45,7 @@ a { color: var(--primary); }
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 16px 16px calc(var(--nav-h) + 16px);
+  padding: calc(env(safe-area-inset-top) + 16px) 16px calc(var(--nav-h) + 16px);
   -webkit-overflow-scrolling: touch;
 }
 
