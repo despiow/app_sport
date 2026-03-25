@@ -5,12 +5,14 @@ import { renderWorkouts, initWorkouts } from './pages/workouts.js';
 import { renderWeight, initWeight } from './pages/weight.js';
 import { renderDiet, initDiet } from './pages/diet.js';
 import { renderProfile, initProfile } from './pages/profile.js';
+import { renderKeto, initKeto } from './pages/keto.js';
 
 const PAGES = {
   dashboard: { render: renderDashboard, init: null },
   workouts:  { render: renderWorkouts,  init: initWorkouts },
   weight:    { render: renderWeight,    init: initWeight },
   diet:      { render: renderDiet,      init: initDiet },
+  keto:      { render: renderKeto,      init: initKeto },
   profile:   { render: renderProfile,   init: initProfile }
 };
 

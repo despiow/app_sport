@@ -852,6 +852,83 @@ datalist { display: none; }
 .security-row-title { font-size: 14px; font-weight: 600; }
 .security-row-sub { font-size: 12px; color: var(--text-muted); }
 
+/* ─── Kéto ───────────────────────────────────────────────────────────────── */
+.keto-phase-banner {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 16px;
+}
+.keto-phase-label { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+.keto-phase-sub   { font-size: 12px; color: var(--text-muted); }
+.keto-phase-tip   { font-size: 12px; margin-top: 8px; color: var(--text-secondary); }
+
+.keto-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+.keto-tab  {
+  flex: 1; padding: 9px 4px; border: 1.5px solid var(--border);
+  border-radius: var(--radius); background: var(--surface);
+  color: var(--text-secondary); font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.keto-tab.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+
+.keto-days-nav {
+  display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 16px;
+  scrollbar-width: none;
+}
+.keto-days-nav::-webkit-scrollbar { display: none; }
+.keto-day-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  min-width: 46px; padding: 8px 6px;
+  border: 1.5px solid var(--border); border-radius: var(--radius);
+  background: var(--surface); cursor: pointer;
+}
+.keto-day-btn.active { border-color: var(--primary); background: rgba(108,99,255,.12); }
+.keto-day-name { font-size: 12px; font-weight: 600; color: var(--text-primary); }
+
+.keto-day-header { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.keto-day-title  { font-size: 18px; font-weight: 700; }
+.keto-day-badge  { font-size: 12px; font-weight: 600; padding: 3px 8px; border-radius: 20px; background: var(--surface); }
+.keto-day-glucides { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+
+.keto-day-macros { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.keto-macro-chip {
+  font-size: 12px; font-weight: 600; padding: 4px 10px;
+  border-radius: 20px; background: var(--surface); border: 1px solid var(--border);
+}
+.keto-carbs-chip { background: rgba(58,154,110,.12); border-color: #3a9a6e; color: #3a9a6e; }
+.keto-carbs-chip.warn { background: rgba(224,123,57,.12); border-color: #e07b39; color: #e07b39; }
+
+.keto-meal-block { background: var(--surface); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 10px; }
+.keto-meal-title { font-size: 13px; font-weight: 700; color: var(--primary); margin-bottom: 8px; }
+.keto-meal-list  { margin: 0; padding-left: 18px; }
+.keto-meal-list li { font-size: 14px; color: var(--text-primary); margin-bottom: 3px; }
+
+.keto-day-tip {
+  font-size: 13px; color: var(--text-secondary); font-style: italic;
+  padding: 10px 14px; background: var(--surface); border-radius: var(--radius);
+  border-left: 3px solid var(--primary); margin-top: 4px;
+}
+
+.keto-food-grid { display: flex; flex-direction: column; gap: 16px; }
+.keto-food-col { background: var(--surface); border-radius: var(--radius); padding: 14px; }
+.keto-food-col h3 { font-size: 15px; font-weight: 700; margin-bottom: 12px; }
+.keto-food-item { padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+.keto-food-item:last-child { border-bottom: none; }
+.keto-food-cat  { font-weight: 600; display: block; margin-bottom: 2px; }
+.keto-food-desc { color: var(--text-secondary); font-size: 13px; }
+.forbidden-item { color: var(--text-secondary); }
+
+.keto-advice-section { background: var(--surface); border-radius: var(--radius); padding: 14px; margin-bottom: 14px; }
+.keto-advice-section h3 { font-size: 15px; font-weight: 700; margin-bottom: 12px; }
+.keto-advice-list { display: flex; flex-direction: column; gap: 10px; }
+.keto-advice-item { display: flex; gap: 12px; align-items: flex-start; font-size: 14px; }
+.keto-advice-icon { font-size: 20px; flex-shrink: 0; }
+.keto-phases-list { display: flex; flex-direction: column; gap: 12px; }
+.keto-phase-item  { padding: 10px 12px; background: var(--bg); border-radius: var(--radius); font-size: 13px; }
+.keto-phase-item strong { display: block; margin-bottom: 4px; font-size: 14px; }
+.keto-phase-item p { margin: 0; color: var(--text-secondary); }
+.keto-medical-note { font-size: 13px; color: var(--text-muted); margin: 0; }
+
 /* ─── Responsive ─────────────────────────────────────────────────────────── */
 @media (max-width: 360px) {
   .stats-grid { grid-template-columns: repeat(2, 1fr); }
