@@ -28,9 +28,14 @@ const app = {
     );
 
     const content = document.getElementById('app-content');
-    content.innerHTML = PAGES[page].render();
-    if (PAGES[page].init) PAGES[page].init();
-    content.scrollTop = 0;
+    try {
+      content.innerHTML = PAGES[page].render();
+      if (PAGES[page].init) PAGES[page].init();
+      content.scrollTop = 0;
+    } catch(e) {
+      content.innerHTML = `<div class="page"><p style="color:red;padding:20px">Erreur : ${e.message}</p></div>`;
+      console.error(e);
+    }
   }
 };
 
