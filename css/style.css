@@ -45,8 +45,10 @@ a { color: var(--primary); }
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 16px 16px calc(var(--nav-h) + env(safe-area-inset-bottom) + 16px);
+  padding: 16px 16px 24px;
   -webkit-overflow-scrolling: touch;
+  height: calc(100dvh - var(--nav-h) - env(safe-area-inset-bottom) - env(safe-area-inset-top));
+  max-height: calc(100dvh - var(--nav-h) - env(safe-area-inset-bottom) - env(safe-area-inset-top));
 }
 
 /* ─── Bottom Navigation ──────────────────────────────────────────────────── */
