@@ -68,15 +68,16 @@ a { color: var(--primary); }
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
-  padding: 8px 12px;
+  gap: 2px;
+  padding: 6px 4px;
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: all 0.2s;
-  min-width: 56px;
+  flex: 1;
+  min-width: 0;
 }
-.nav-item .nav-icon { font-size: 22px; transition: transform 0.2s; }
-.nav-item .nav-label { font-size: 10px; color: var(--text-muted); font-weight: 500; transition: color 0.2s; }
+.nav-item .nav-icon { font-size: 20px; transition: transform 0.2s; }
+.nav-item .nav-label { font-size: 9px; color: var(--text-muted); font-weight: 500; transition: color 0.2s; white-space: nowrap; }
 .nav-item.active .nav-icon { transform: scale(1.1); }
 .nav-item.active .nav-label { color: var(--primary); }
 .nav-item.active { background: var(--primary-dim); }
