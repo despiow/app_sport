@@ -9,8 +9,13 @@ CREATE TABLE IF NOT EXISTS profile (
   weight         DECIMAL(5,1)  DEFAULT 0,
   activity_level VARCHAR(20)   DEFAULT 'moderate',
   goal           VARCHAR(20)   DEFAULT 'maintain',
+  pin_hash       VARCHAR(128)  DEFAULT NULL,
+  pin_salt       VARCHAR(64)   DEFAULT NULL,
   updated_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
+-- Migration pour table existante :
+-- ALTER TABLE profile ADD COLUMN pin_hash VARCHAR(128) DEFAULT NULL;
+-- ALTER TABLE profile ADD COLUMN pin_salt VARCHAR(64) DEFAULT NULL;
 
 -- Ligne unique (profil utilisateur)
 INSERT IGNORE INTO profile (id) VALUES (1);

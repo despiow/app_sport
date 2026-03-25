@@ -1,8 +1,9 @@
-const CACHE = 'sport-tracker-v1';
+const CACHE = 'sport-tracker-v2';
 const ASSETS = [
   '/',
   '/index.html',
   '/css/style.css',
+  '/js/auth.js',
   '/js/db.js',
   '/js/app.js',
   '/js/pages/dashboard.js',

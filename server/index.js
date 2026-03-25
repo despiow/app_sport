@@ -1,25 +1,115 @@
 require('dotenv/config');
 const express = require('express');
 const cors    = require('cors');
+const crypto  = require('crypto');
 const { createPool } = require('./db');
 
-const app  = express();
-const PORT = process.env.PORT || 4000;
-const db   = createPool();
+const app    = express();
+const PORT   = process.env.PORT || 4000;
+const db     = createPool();
+const SECRET = process.env.SESSION_SECRET || 'sporttracker-secret-change-me';
 
 app.use(cors());
 app.use(express.json({ limit: '2mb' }));
 
-// ── Helpers ────────────────────────────────────────────────────────────────
+// ── Generic error wrapper ──────────────────────────────────────────────────
 const wrap = fn => (req, res) => fn(req, res).catch(e => {
   console.error(e);
   res.status(500).json({ error: e.message });
+});
+
+// ── Token helpers ─────────────────────────────────────────────────────────
+function createToken() {
+  const payload = Buffer.from(JSON.stringify({
+    exp: Date.now() + 30 * 24 * 60 * 60 * 1000   // 30 jours
+  })).toString('base64url');
+  const sig = crypto.createHmac('sha256', SECRET).update(payload).digest('base64url');
+  return `${payload}.${sig}`;
+}
+
+function verifyToken(token) {
+  if (!token) return false;
+  const parts = token.split('.');
+  if (parts.length !== 2) return false;
+  const [payload, sig] = parts;
+  const expected = crypto.createHmac('sha256', SECRET).update(payload).digest('base64url');
+  if (expected !== sig) return false;
+  try {
+    const { exp } = JSON.parse(Buffer.from(payload, 'base64url').toString());
+    return exp > Date.now();
+  } catch { return false; }
+}
+
+async function hashPin(pin, salt) {
+  return new Promise((resolve, reject) =>
+    crypto.pbkdf2(String(pin), salt, 100000, 64, 'sha512',
+      (err, key) => err ? reject(err) : resolve(key.toString('hex')))
+  );
+}
+
+// ── Auth middleware ────────────────────────────────────────────────────────
+const requireAuth = (req, res, next) => {
+  const header = req.headers.authorization;
+  if (!header?.startsWith('Bearer ')) return res.status(401).json({ error: 'Non autorisé' });
+  if (verifyToken(header.slice(7))) return next();
+  return res.status(401).json({ error: 'Session expirée' });
+};
+
+// Protège toutes les routes /api/* sauf /api/auth/*
+app.use('/api', (req, res, next) => {
+  if (req.path.startsWith('/auth/')) return next();
+  return requireAuth(req, res, next);
 });
 
 // ── Health ─────────────────────────────────────────────────────────────────
 app.get('/health', wrap(async (_req, res) => {
   const [rows] = await db.query('SELECT 1 AS ok');
   res.json({ ok: true, db: rows[0]?.ok === 1 });
+}));
+
+// ── Auth ───────────────────────────────────────────────────────────────────
+app.get('/api/auth/check', wrap(async (_req, res) => {
+  const [rows] = await db.query('SELECT pin_hash FROM profile WHERE id = 1');
+  res.json({ hasPIN: !!(rows[0]?.pin_hash) });
+}));
+
+app.post('/api/auth/setup', wrap(async (req, res) => {
+  const { pin } = req.body;
+  if (!pin || String(pin).length < 4)
+    return res.status(400).json({ error: 'Code PIN trop court (min 4 chiffres)' });
+  const [rows] = await db.query('SELECT pin_hash FROM profile WHERE id = 1');
+  if (rows[0]?.pin_hash)
+    return res.status(400).json({ error: 'Un code PIN est déjà configuré' });
+  const salt = crypto.randomBytes(32).toString('hex');
+  const hash = await hashPin(pin, salt);
+  await db.query('UPDATE profile SET pin_hash=?, pin_salt=? WHERE id=1', [hash, salt]);
+  res.json({ ok: true, token: createToken() });
+}));
+
+app.post('/api/auth/login', wrap(async (req, res) => {
+  const { pin } = req.body;
+  const [rows] = await db.query('SELECT pin_hash, pin_salt FROM profile WHERE id = 1');
+  const p = rows[0];
+  if (!p?.pin_hash) return res.status(400).json({ error: 'Aucun code PIN configuré' });
+  const hash = await hashPin(pin, p.pin_salt);
+  if (hash !== p.pin_hash)
+    return res.status(401).json({ error: 'Code PIN incorrect' });
+  res.json({ ok: true, token: createToken() });
+}));
+
+app.post('/api/auth/change-pin', requireAuth, wrap(async (req, res) => {
+  const { oldPin, newPin } = req.body;
+  if (!newPin || String(newPin).length < 4)
+    return res.status(400).json({ error: 'Nouveau code trop court (min 4 chiffres)' });
+  const [rows] = await db.query('SELECT pin_hash, pin_salt FROM profile WHERE id = 1');
+  const p = rows[0];
+  const oldHash = await hashPin(oldPin, p.pin_salt);
+  if (oldHash !== p.pin_hash)
+    return res.status(401).json({ error: 'Ancien code PIN incorrect' });
+  const salt = crypto.randomBytes(32).toString('hex');
+  const hash = await hashPin(newPin, salt);
+  await db.query('UPDATE profile SET pin_hash=?, pin_salt=? WHERE id=1', [hash, salt]);
+  res.json({ ok: true, token: createToken() });
 }));
 
 // ── Profile ────────────────────────────────────────────────────────────────
@@ -121,6 +211,22 @@ app.put('/api/diet/:date', wrap(async (req, res) => {
   );
   res.json({ ok: true });
 }));
+
+// ── Auto-migration : ajoute les colonnes PIN si absentes ──────────────────
+(async () => {
+  const cols = [
+    ['pin_hash', 'VARCHAR(128)'],
+    ['pin_salt', 'VARCHAR(64)'],
+  ];
+  for (const [name, type] of cols) {
+    try {
+      await db.query(`ALTER TABLE profile ADD COLUMN ${name} ${type} DEFAULT NULL`);
+      console.log(`Migration: colonne ${name} ajoutée`);
+    } catch (e) {
+      if (e.code !== 'ER_DUP_FIELDNAME') console.error(`Migration ${name}:`, e.message);
+    }
+  }
+})();
 
 // ── Start ──────────────────────────────────────────────────────────────────
 app.listen(PORT, () => console.log(`Sport API listening on port ${PORT}`));

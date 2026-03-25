@@ -76,6 +76,27 @@ export function renderProfile() {
         </div>
       </form>
 
+      <!-- Sécurité -->
+      <div class="section">
+        <h2 class="section-title">🔒 Sécurité</h2>
+        <div class="security-section">
+          <div class="security-row">
+            <div class="security-row-info">
+              <span class="security-row-title">Changer le code PIN</span>
+              <span class="security-row-sub">Modifiez votre code d'accès à 6 chiffres</span>
+            </div>
+            <button class="btn btn-outline btn-sm" id="btn-change-pin">Modifier</button>
+          </div>
+          <div class="security-row">
+            <div class="security-row-info">
+              <span class="security-row-title">Se déconnecter</span>
+              <span class="security-row-sub">Supprimer la session sur cet appareil</span>
+            </div>
+            <button class="btn btn-sm" style="border:1.5px solid var(--danger);color:var(--danger)" id="btn-logout">Déconnexion</button>
+          </div>
+        </div>
+      </div>
+
       <!-- Nutrition Calculator Results -->
       <div class="section" id="nutrition-results">
         ${results ? renderNutritionResults(results) : `
@@ -186,6 +207,14 @@ function calcNutrition(p) {
 }
 
 export function initProfile() {
+  // Déconnexion
+  document.getElementById('btn-logout')?.addEventListener('click', () => {
+    if (confirm('Se déconnecter de cet appareil ?')) window.Auth?.logout();
+  });
+
+  // Changer le PIN
+  document.getElementById('btn-change-pin')?.addEventListener('click', () => showChangePinModal());
+
   // Goal buttons
   document.getElementById('p-goal-btns')?.addEventListener('click', e => {
     const btn = e.target.closest('.goal-btn');
@@ -238,6 +267,63 @@ function updateResults() {
         <p>Remplissez votre profil pour obtenir vos besoins nutritionnels personnalisés.</p>
       </div>`;
   }
+}
+
+function showChangePinModal() {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h2>Changer le code PIN</h2>
+        <button class="modal-close" id="close-pin-modal">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Ancien code PIN</label>
+          <input type="password" inputmode="numeric" id="old-pin" maxlength="6" placeholder="••••••">
+        </div>
+        <div class="form-group">
+          <label>Nouveau code PIN</label>
+          <input type="password" inputmode="numeric" id="new-pin" maxlength="6" placeholder="••••••">
+        </div>
+        <div class="form-group">
+          <label>Confirmer le nouveau code</label>
+          <input type="password" inputmode="numeric" id="confirm-pin" maxlength="6" placeholder="••••••">
+        </div>
+        <p id="pin-modal-error" style="color:var(--danger);font-size:13px;min-height:18px"></p>
+        <div class="form-actions" style="margin-top:8px;padding-top:8px">
+          <button class="btn btn-outline" id="cancel-pin-modal">Annuler</button>
+          <button class="btn btn-primary" id="save-pin-modal">Enregistrer</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const close = () => overlay.remove();
+  document.getElementById('close-pin-modal').addEventListener('click', close);
+  document.getElementById('cancel-pin-modal').addEventListener('click', close);
+  overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+
+  document.getElementById('save-pin-modal').addEventListener('click', async () => {
+    const oldPin  = document.getElementById('old-pin').value;
+    const newPin  = document.getElementById('new-pin').value;
+    const confirm = document.getElementById('confirm-pin').value;
+    const errEl   = document.getElementById('pin-modal-error');
+
+    if (!oldPin || !newPin || !confirm) { errEl.textContent = 'Remplissez tous les champs'; return; }
+    if (newPin.length < 4) { errEl.textContent = 'Code trop court (min 4 chiffres)'; return; }
+    if (newPin !== confirm) { errEl.textContent = 'Les codes ne correspondent pas'; return; }
+
+    try {
+      await window.Auth?.changePin(oldPin, newPin);
+      close();
+      showToast('Code PIN mis à jour !');
+    } catch (e) {
+      errEl.textContent = e.message;
+    }
+  });
 }
 
 function showToast(msg) {

@@ -35,7 +35,6 @@ body {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  padding-top: env(safe-area-inset-top);
 }
 input, select, textarea, button { font-family: inherit; }
 button { cursor: pointer; border: none; background: none; }
@@ -743,6 +742,102 @@ datalist { display: none; }
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* ─── Écran de connexion PIN ─────────────────────────────────────────────── */
+.login-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 32px 24px calc(env(safe-area-inset-bottom, 0px) + 32px);
+  gap: 28px;
+}
+.login-top { text-align: center; display: flex; flex-direction: column; gap: 6px; }
+.login-icon { font-size: 60px; line-height: 1; }
+.login-title { font-size: 30px; font-weight: 800; }
+.login-sub { font-size: 16px; color: var(--text-muted); }
+.login-hint { font-size: 13px; color: var(--text-dim); max-width: 280px; line-height: 1.5; }
+
+.pin-display {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+}
+.pin-dot {
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--border2);
+  background: transparent;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+}
+.pin-dot.filled {
+  background: var(--primary);
+  border-color: var(--primary);
+  transform: scale(1.15);
+}
+
+.pin-error {
+  min-height: 20px;
+  color: var(--danger);
+  font-size: 13px;
+  text-align: center;
+  font-weight: 500;
+}
+
+.numpad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  width: 100%;
+  max-width: 300px;
+}
+.numpad-key {
+  height: 68px;
+  border-radius: var(--radius);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 24px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.1s, border-color 0.1s, transform 0.1s;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.numpad-key:active {
+  background: var(--primary-dim);
+  border-color: var(--primary);
+  transform: scale(0.93);
+}
+.numpad-key.empty {
+  pointer-events: none;
+  background: transparent;
+  border-color: transparent;
+}
+.numpad-key.del { font-size: 20px; color: var(--text-muted); }
+
+/* ─── Section Sécurité (profil) ──────────────────────────────────────────── */
+.security-section {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.security-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  gap: 12px;
+}
+.security-row:last-child { border-bottom: none; }
+.security-row-info { display: flex; flex-direction: column; gap: 2px; }
+.security-row-title { font-size: 14px; font-weight: 600; }
+.security-row-sub { font-size: 12px; color: var(--text-muted); }
 
 /* ─── Responsive ─────────────────────────────────────────────────────────── */
 @media (max-width: 360px) {

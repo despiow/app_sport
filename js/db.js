@@ -11,16 +11,35 @@ const DEFAULT_PROFILE = {
   height: 175, weight: 75, activityLevel: 'moderate', goal: 'maintain'
 };
 
+// ── Fetch avec token d'auth ────────────────────────────────────────────────
+async function _api(url, opts = {}) {
+  const token = localStorage.getItem('sport_token');
+  const res = await fetch(url, {
+    ...opts,
+    headers: {
+      ...(opts.body ? { 'Content-Type': 'application/json' } : {}),
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      ...opts.headers,
+    }
+  });
+  if (res.status === 401) {
+    localStorage.removeItem('sport_token');
+    window.location.reload();
+    throw new Error('Session expirée');
+  }
+  return res;
+}
+
 const DB = {
 
   // ── Init : charge tout depuis l'API au démarrage ───────────────────────────
   async init() {
     try {
       const [profile, workouts, weights, todayDiet] = await Promise.all([
-        fetch('/api/profile').then(r => r.json()),
-        fetch('/api/workouts').then(r => r.json()),
-        fetch('/api/weights').then(r => r.json()),
-        fetch(`/api/diet/${this.today()}`).then(r => r.json()),
+        _api('/api/profile').then(r => r.json()),
+        _api('/api/workouts').then(r => r.json()),
+        _api('/api/weights').then(r => r.json()),
+        _api(`/api/diet/${this.today()}`).then(r => r.json()),
       ]);
       cache.profile  = this._normalizeProfile(profile);
       cache.workouts = workouts || [];
@@ -56,9 +75,8 @@ const DB = {
     cache.profile = data;
     localStorage.setItem('profile', JSON.stringify(data));
     try {
-      await fetch('/api/profile', {
+      await _api('/api/profile', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });
     } catch (e) { console.warn('Profile sync failed', e); }
@@ -74,9 +92,8 @@ const DB = {
     if (isNew) cache.workouts.unshift(w); else cache.workouts[idx] = w;
     localStorage.setItem('workouts', JSON.stringify(cache.workouts));
     try {
-      await fetch(isNew ? '/api/workouts' : `/api/workouts/${w.id}`, {
+      await _api(isNew ? '/api/workouts' : `/api/workouts/${w.id}`, {
         method: isNew ? 'POST' : 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(w)
       });
     } catch (e) { console.warn('Workout sync failed', e); }
@@ -87,7 +104,7 @@ const DB = {
     cache.workouts = cache.workouts.filter(w => w.id !== id);
     localStorage.setItem('workouts', JSON.stringify(cache.workouts));
     try {
-      await fetch(`/api/workouts/${id}`, { method: 'DELETE' });
+      await _api(`/api/workouts/${id}`, { method: 'DELETE' });
     } catch (e) { console.warn('Delete workout failed', e); }
   },
 
@@ -101,9 +118,8 @@ const DB = {
     if (idx >= 0) cache.weights[idx] = entry; else cache.weights.push(entry);
     localStorage.setItem('weights', JSON.stringify(cache.weights));
     try {
-      await fetch('/api/weights', {
+      await _api('/api/weights', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(entry)
       });
     } catch (e) { console.warn('Weight sync failed', e); }
@@ -113,7 +129,7 @@ const DB = {
     cache.weights = cache.weights.filter(e => e.id !== id);
     localStorage.setItem('weights', JSON.stringify(cache.weights));
     try {
-      await fetch(`/api/weights/${id}`, { method: 'DELETE' });
+      await _api(`/api/weights/${id}`, { method: 'DELETE' });
     } catch (e) { console.warn('Delete weight failed', e); }
   },
 
@@ -125,7 +141,7 @@ const DB = {
   async fetchDietDay(date) {
     if (cache.diet[date]) return cache.diet[date];
     try {
-      const data = await fetch(`/api/diet/${date}`).then(r => r.json());
+      const data = await _api(`/api/diet/${date}`).then(r => r.json());
       cache.diet[date] = data;
       return data;
     } catch {
@@ -136,9 +152,8 @@ const DB = {
   async saveDietDay(date, data) {
     cache.diet[date] = data;
     try {
-      await fetch(`/api/diet/${date}`, {
+      await _api(`/api/diet/${date}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });
     } catch (e) { console.warn('Diet sync failed', e); }
