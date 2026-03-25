@@ -67,10 +67,10 @@ export function renderWeight() {
     </div>
 
     <!-- Modal: Add Weight -->
-    <div class="modal-overlay" id="modal-weight" style="display:none">
-      <div class="modal modal-sm">
+    <div class="modal-overlay centered" id="modal-weight" style="display:none">
+      <div class="modal">
         <div class="modal-header">
-          <h2>Enregistrer le poids</h2>
+          <h2>⚖️ Enregistrer le poids</h2>
           <button class="modal-close" onclick="document.getElementById('modal-weight').style.display='none'">✕</button>
         </div>
         <div class="modal-body">
@@ -81,7 +81,8 @@ export function renderWeight() {
             </div>
             <div class="form-group">
               <label>Poids (kg)</label>
-              <input type="number" id="wt-weight" step="0.1" min="20" max="300" placeholder="75.5" required>
+              <input type="number" id="wt-weight" step="0.1" min="20" max="300" placeholder="75.5"
+                style="font-size:28px;font-weight:700;text-align:center;padding:14px;letter-spacing:1px" required>
             </div>
             <div class="form-group">
               <label>Note (optionnel)</label>
@@ -89,7 +90,7 @@ export function renderWeight() {
             </div>
             <div class="form-actions">
               <button type="button" class="btn btn-ghost" onclick="document.getElementById('modal-weight').style.display='none'">Annuler</button>
-              <button type="submit" class="btn btn-primary">Enregistrer</button>
+              <button type="submit" class="btn btn-primary btn-full">✅ Enregistrer</button>
             </div>
           </form>
         </div>
