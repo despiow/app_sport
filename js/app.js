@@ -6,14 +6,18 @@ import { renderWeight, initWeight } from './pages/weight.js';
 import { renderDiet, initDiet } from './pages/diet.js';
 import { renderProfile, initProfile } from './pages/profile.js';
 import { renderKeto, initKeto } from './pages/keto.js';
+import { renderEntrainements, initEntrainements } from './pages/entrainements.js';
+import { renderPerf, initPerf } from './pages/perf.js';
 
 const PAGES = {
-  dashboard: { render: renderDashboard, init: null },
-  workouts:  { render: renderWorkouts,  init: initWorkouts },
-  weight:    { render: renderWeight,    init: initWeight },
-  diet:      { render: renderDiet,      init: initDiet },
-  keto:      { render: renderKeto,      init: initKeto },
-  profile:   { render: renderProfile,   init: initProfile }
+  dashboard:      { render: renderDashboard,      init: null },
+  entrainements:  { render: renderEntrainements,  init: initEntrainements },
+  perf:           { render: renderPerf,           init: initPerf },
+  workouts:       { render: renderWorkouts,        init: initWorkouts },
+  weight:         { render: renderWeight,          init: initWeight },
+  diet:           { render: renderDiet,            init: initDiet },
+  keto:           { render: renderKeto,            init: initKeto },
+  profile:        { render: renderProfile,         init: initProfile }
 };
 
 const app = {

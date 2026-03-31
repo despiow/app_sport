@@ -1,4 +1,4 @@
-const CACHE = 'sport-tracker-v3';
+const CACHE = 'sport-tracker-v4';
 const ASSETS = [
   '/',
   '/index.html',
@@ -11,7 +11,9 @@ const ASSETS = [
   '/js/pages/diet.js',
   '/js/pages/weight.js',
   '/js/pages/profile.js',
-  '/js/pages/keto.js'
+  '/js/pages/keto.js',
+  '/js/pages/entrainements.js',
+  '/js/pages/perf.js'
 ];
 
 self.addEventListener('install', e => {

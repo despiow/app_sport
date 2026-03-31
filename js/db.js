@@ -1,9 +1,11 @@
 // ─── Cache in-memory + API sync ───────────────────────────────────────────────
 const cache = {
-  profile:  null,
-  workouts: [],
-  weights:  [],
-  diet:     {}   // keyed by date string
+  profile:       null,
+  workouts:      [],
+  weights:       [],
+  diet:          {},   // keyed by date string
+  trainingPlans: [],
+  perfLogs:      {}    // keyed by date string
 };
 
 const DEFAULT_PROFILE = {
@@ -35,21 +37,28 @@ const DB = {
   // ── Init : charge tout depuis l'API au démarrage ───────────────────────────
   async init() {
     try {
-      const [profile, workouts, weights, todayDiet] = await Promise.all([
+      const [profile, workouts, weights, todayDiet, trainingPlans, perfLogs] = await Promise.all([
         _api('/api/profile').then(r => r.json()),
         _api('/api/workouts').then(r => r.json()),
         _api('/api/weights').then(r => r.json()),
         _api(`/api/diet/${this.today()}`).then(r => r.json()),
+        _api('/api/training-plans').then(r => r.json()),
+        _api('/api/perf-logs').then(r => r.json()),
       ]);
       cache.profile  = this._normalizeProfile(profile);
       cache.workouts = workouts || [];
       cache.weights  = weights  || [];
       cache.diet[this.today()] = todayDiet;
+      cache.trainingPlans = trainingPlans || [];
+      cache.perfLogs = {};
+      (perfLogs || []).forEach(log => { cache.perfLogs[log.date] = log; });
     } catch (e) {
       console.warn('API indisponible, fallback localStorage', e);
-      cache.profile  = JSON.parse(localStorage.getItem('profile'))  || { ...DEFAULT_PROFILE };
-      cache.workouts = JSON.parse(localStorage.getItem('workouts')) || [];
-      cache.weights  = JSON.parse(localStorage.getItem('weights'))  || [];
+      cache.profile       = JSON.parse(localStorage.getItem('profile'))        || { ...DEFAULT_PROFILE };
+      cache.workouts      = JSON.parse(localStorage.getItem('workouts'))       || [];
+      cache.weights       = JSON.parse(localStorage.getItem('weights'))        || [];
+      cache.trainingPlans = JSON.parse(localStorage.getItem('trainingPlans'))  || [];
+      cache.perfLogs      = JSON.parse(localStorage.getItem('perfLogs'))       || {};
     }
   },
 
@@ -157,6 +166,49 @@ const DB = {
         body: JSON.stringify(data)
       });
     } catch (e) { console.warn('Diet sync failed', e); }
+  },
+
+  // ── Training Plans ─────────────────────────────────────────────────────────
+  getTrainingPlans() { return cache.trainingPlans; },
+  getTrainingPlan(dayOfWeek) {
+    return cache.trainingPlans.find(p => p.day_of_week === dayOfWeek) || null;
+  },
+
+  async saveTrainingPlan(plan) {
+    const idx = cache.trainingPlans.findIndex(p => p.id === plan.id);
+    const isNew = idx < 0;
+    if (isNew) cache.trainingPlans.push(plan); else cache.trainingPlans[idx] = plan;
+    localStorage.setItem('trainingPlans', JSON.stringify(cache.trainingPlans));
+    try {
+      await _api(isNew ? '/api/training-plans' : `/api/training-plans/${plan.id}`, {
+        method: isNew ? 'POST' : 'PUT',
+        body: JSON.stringify(plan)
+      });
+    } catch (e) { console.warn('Training plan sync failed', e); }
+    return plan;
+  },
+
+  async deleteTrainingPlan(id) {
+    cache.trainingPlans = cache.trainingPlans.filter(p => p.id !== id);
+    localStorage.setItem('trainingPlans', JSON.stringify(cache.trainingPlans));
+    try {
+      await _api(`/api/training-plans/${id}`, { method: 'DELETE' });
+    } catch (e) { console.warn('Delete training plan failed', e); }
+  },
+
+  // ── Perf Logs ──────────────────────────────────────────────────────────────
+  getPerfLog(date) { return cache.perfLogs[date] || null; },
+  getAllPerfLogs()  { return cache.perfLogs; },
+
+  async savePerfLog(date, log) {
+    cache.perfLogs[date] = log;
+    localStorage.setItem('perfLogs', JSON.stringify(cache.perfLogs));
+    try {
+      await _api(`/api/perf-logs/${date}`, {
+        method: 'PUT',
+        body: JSON.stringify(log)
+      });
+    } catch (e) { console.warn('Perf log sync failed', e); }
   },
 
   // ── Utils ──────────────────────────────────────────────────────────────────

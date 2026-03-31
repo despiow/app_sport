@@ -212,6 +212,56 @@ app.put('/api/diet/:date', wrap(async (req, res) => {
   res.json({ ok: true });
 }));
 
+// ── Training Plans ─────────────────────────────────────────────────────────
+app.get('/api/training-plans', wrap(async (_req, res) => {
+  const [rows] = await db.query('SELECT * FROM training_plans ORDER BY created_at ASC');
+  res.json(rows.map(r => ({ ...r, exercises: r.exercises || [] })));
+}));
+
+app.post('/api/training-plans', wrap(async (req, res) => {
+  const { id, day_of_week, name, exercises, notes } = req.body;
+  await db.query(
+    `INSERT INTO training_plans (id, day_of_week, name, exercises, notes)
+     VALUES (?, ?, ?, ?, ?)`,
+    [id, day_of_week, name, JSON.stringify(exercises || []), notes || null]
+  );
+  res.json({ ok: true });
+}));
+
+app.put('/api/training-plans/:id', wrap(async (req, res) => {
+  const { name, exercises, notes } = req.body;
+  await db.query(
+    `UPDATE training_plans SET name=?, exercises=?, notes=? WHERE id=?`,
+    [name, JSON.stringify(exercises || []), notes || null, req.params.id]
+  );
+  res.json({ ok: true });
+}));
+
+app.delete('/api/training-plans/:id', wrap(async (req, res) => {
+  await db.query('DELETE FROM training_plans WHERE id=?', [req.params.id]);
+  res.json({ ok: true });
+}));
+
+// ── Perf Logs ──────────────────────────────────────────────────────────────
+app.get('/api/perf-logs', wrap(async (_req, res) => {
+  const [rows] = await db.query('SELECT * FROM perf_logs ORDER BY date DESC');
+  res.json(rows.map(r => ({ ...r, exercises_done: r.exercises_done || [] })));
+}));
+
+app.put('/api/perf-logs/:date', wrap(async (req, res) => {
+  const { id, plan_id, day_of_week, feeling, notes, exercises_done } = req.body;
+  await db.query(
+    `INSERT INTO perf_logs (id, date, plan_id, day_of_week, feeling, notes, exercises_done)
+     VALUES (?, ?, ?, ?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE
+       plan_id=VALUES(plan_id), feeling=VALUES(feeling),
+       notes=VALUES(notes), exercises_done=VALUES(exercises_done)`,
+    [id, req.params.date, plan_id || null, day_of_week || null,
+     feeling || null, notes || null, JSON.stringify(exercises_done || [])]
+  );
+  res.json({ ok: true });
+}));
+
 // ── Auto-migration : ajoute les colonnes PIN si absentes ──────────────────
 (async () => {
   const cols = [
@@ -225,6 +275,32 @@ app.put('/api/diet/:date', wrap(async (req, res) => {
     } catch (e) {
       if (e.code !== 'ER_DUP_FIELDNAME') console.error(`Migration ${name}:`, e.message);
     }
+  }
+
+  // Nouvelles tables pour le programme et les perfs
+  try {
+    await db.query(`CREATE TABLE IF NOT EXISTS training_plans (
+      id VARCHAR(32) PRIMARY KEY,
+      day_of_week VARCHAR(20) NOT NULL,
+      name VARCHAR(255) NOT NULL,
+      exercises JSON,
+      notes TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+    await db.query(`CREATE TABLE IF NOT EXISTS perf_logs (
+      id VARCHAR(32) PRIMARY KEY,
+      date DATE NOT NULL UNIQUE,
+      plan_id VARCHAR(32),
+      day_of_week VARCHAR(20),
+      feeling VARCHAR(10),
+      notes TEXT,
+      exercises_done JSON,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      INDEX idx_perf_date (date)
+    )`);
+    console.log('Migration training_plans / perf_logs OK');
+  } catch (e) {
+    console.error('Migration tables:', e.message);
   }
 })();
 
