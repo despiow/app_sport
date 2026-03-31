@@ -1,4 +1,4 @@
-const CACHE = 'sport-tracker-v10';
+const CACHE = 'sport-tracker-v11';
 const ASSETS = [
   '/',
   '/index.html',
@@ -30,6 +30,23 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   if (e.request.url.startsWith('chrome-extension://')) return;
+  const url = new URL(e.request.url);
+
+  // Fichiers JS : network-first — toujours la dernière version, cache en fallback
+  if (url.origin === self.location.origin && url.pathname.endsWith('.js')) {
+    e.respondWith(
+      fetch(e.request).then(res => {
+        if (res && res.status === 200 && res.type === 'basic') {
+          const clone = res.clone();
+          caches.open(CACHE).then(c => c.put(e.request, clone));
+        }
+        return res;
+      }).catch(() => caches.match(e.request))
+    );
+    return;
+  }
+
+  // Tout le reste : cache-first
   e.respondWith(
     caches.match(e.request).then(cached => {
       if (cached) return cached;
