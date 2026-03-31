@@ -61,6 +61,26 @@ app.use('/api', (req, res, next) => {
   return requireAuth(req, res, next);
 });
 
+// ── Food search (proxy Open Food Facts) ────────────────────────────────────
+app.get('/api/food-search', wrap(async (req, res) => {
+  const q = String(req.query.q || '').trim();
+  if (q.length < 2) return res.json([]);
+  const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&json=1&page_size=10&fields=product_name,nutriments&lc=fr`;
+  const r = await fetch(url, { headers: { 'User-Agent': 'SportTrackerApp/1.0' } });
+  const data = await r.json();
+  const results = (data.products || [])
+    .filter(p => p.product_name && p.nutriments?.['energy-kcal_100g'] != null)
+    .slice(0, 8)
+    .map(p => ({
+      name:     p.product_name,
+      calories: Math.round(p.nutriments['energy-kcal_100g']   || 0),
+      protein:  Math.round((p.nutriments['proteins_100g']      || 0) * 10) / 10,
+      carbs:    Math.round((p.nutriments['carbohydrates_100g'] || 0) * 10) / 10,
+      fat:      Math.round((p.nutriments['fat_100g']           || 0) * 10) / 10,
+    }));
+  res.json(results);
+}));
+
 // ── Health ─────────────────────────────────────────────────────────────────
 app.get('/health', wrap(async (_req, res) => {
   const [rows] = await db.query('SELECT 1 AS ok');

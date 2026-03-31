@@ -439,31 +439,19 @@ async function _searchOFF(query) {
   const box = document.getElementById('food-suggestions');
   if (!box) return;
   try {
-    const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&json=1&page_size=10&fields=product_name,nutriments&lc=fr`;
-    const res  = await fetch(url);
-    const data = await res.json();
-    const products = (data.products || []).filter(p =>
-      p.product_name && p.nutriments?.['energy-kcal_100g'] != null
-    );
-    if (!products.length) {
+    const res     = await fetch(`/api/food-search?q=${encodeURIComponent(query)}`);
+    const results = await res.json();
+    if (!results.length) {
       box.innerHTML = '<div class="sug-empty">Aucun résultat</div>';
       return;
     }
-    box.innerHTML = products.slice(0, 8).map(p => {
-      const n    = p.nutriments;
-      const cal  = Math.round(n['energy-kcal_100g']   || 0);
-      const prot = Math.round((n['proteins_100g']      || 0) * 10) / 10;
-      const carb = Math.round((n['carbohydrates_100g'] || 0) * 10) / 10;
-      const fat  = Math.round((n['fat_100g']           || 0) * 10) / 10;
-      const food = { name: p.product_name, calories: cal, protein: prot, carbs: carb, fat: fat };
-      return `
-        <div class="food-suggestion-item" data-food='${JSON.stringify(food).replace(/'/g,"&#39;")}'>
-          <span class="sug-name">${escHtml(p.product_name)}</span>
-          <span class="sug-kcal">${cal} kcal · P${prot}g G${carb}g L${fat}g</span>
-        </div>`;
-    }).join('');
+    box.innerHTML = results.map(f => `
+      <div class="food-suggestion-item" data-food='${JSON.stringify(f).replace(/'/g,"&#39;")}'>
+        <span class="sug-name">${escHtml(f.name)}</span>
+        <span class="sug-kcal">${f.calories} kcal · P${f.protein}g G${f.carbs}g L${f.fat}g</span>
+      </div>`).join('');
   } catch {
-    box.innerHTML = '<div class="sug-empty">Erreur réseau — vérifier la connexion</div>';
+    box.innerHTML = '<div class="sug-empty">Erreur — réessaie</div>';
   }
 }
 
