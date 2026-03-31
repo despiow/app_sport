@@ -193,12 +193,18 @@ app.delete('/api/weights/:id', wrap(async (req, res) => {
 }));
 
 // ── Diet Templates (par jour de semaine) ───────────────────────────────────
+const parseMeals = v => {
+  if (!v) return { breakfast: [], lunch: [], dinner: [], snack: [] };
+  if (typeof v === 'string') { try { return JSON.parse(v); } catch { return { breakfast: [], lunch: [], dinner: [], snack: [] }; } }
+  return v;
+};
+
 app.get('/api/diet-templates', wrap(async (_req, res) => {
   const [rows] = await db.query(
     "SELECT date, meals FROM diet_days WHERE date LIKE 'tpl_%'"
   );
   const out = {};
-  rows.forEach(r => { out[r.date.replace('tpl_', '')] = { meals: r.meals }; });
+  rows.forEach(r => { out[r.date.replace('tpl_', '')] = { meals: parseMeals(r.meals) }; });
   res.json(out);
 }));
 
@@ -207,10 +213,7 @@ app.get('/api/diet-template/:day', wrap(async (req, res) => {
     'SELECT meals FROM diet_days WHERE date = ?',
     [`tpl_${req.params.day}`]
   );
-  res.json(rows[0]
-    ? { meals: rows[0].meals }
-    : { meals: { breakfast: [], lunch: [], dinner: [], snack: [] } }
-  );
+  res.json({ meals: rows[0] ? parseMeals(rows[0].meals) : { breakfast: [], lunch: [], dinner: [], snack: [] } });
 }));
 
 app.put('/api/diet-template/:day', wrap(async (req, res) => {
@@ -227,7 +230,7 @@ app.put('/api/diet-template/:day', wrap(async (req, res) => {
 app.get('/api/diet/:date', wrap(async (req, res) => {
   const [rows] = await db.query('SELECT * FROM diet_days WHERE date=?', [req.params.date]);
   if (rows[0]) {
-    res.json({ date: rows[0].date, meals: rows[0].meals });
+    res.json({ date: rows[0].date, meals: parseMeals(rows[0].meals) });
   } else {
     res.json({ date: req.params.date, meals: { breakfast: [], lunch: [], dinner: [], snack: [] } });
   }
@@ -244,9 +247,15 @@ app.put('/api/diet/:date', wrap(async (req, res) => {
 }));
 
 // ── Training Plans ─────────────────────────────────────────────────────────
+const parseExercises = v => {
+  if (!v) return [];
+  if (typeof v === 'string') { try { return JSON.parse(v); } catch { return []; } }
+  return v;
+};
+
 app.get('/api/training-plans', wrap(async (_req, res) => {
   const [rows] = await db.query('SELECT * FROM training_plans ORDER BY created_at ASC');
-  res.json(rows.map(r => ({ ...r, exercises: r.exercises || [] })));
+  res.json(rows.map(r => ({ ...r, exercises: parseExercises(r.exercises) })));
 }));
 
 app.post('/api/training-plans', wrap(async (req, res) => {
@@ -336,12 +345,10 @@ app.put('/api/perf-logs/:date', wrap(async (req, res) => {
 
   // ── Seed initial si tables vides ──────────────────────────────────────
   try {
-    const [[{ cnt: planCnt }]] = await db.query('SELECT COUNT(*) AS cnt FROM training_plans');
-    const [[{ cnt: tplCnt  }]] = await db.query("SELECT COUNT(*) AS cnt FROM diet_days WHERE date LIKE 'tpl_%'");
-    if (planCnt === 0 || tplCnt === 0) {
-      await seedData(db);
-      console.log('Seed initial effectué');
-    }
+    // Seed idempotent : toujours mettre à jour les templates diet (ON DUPLICATE KEY UPDATE)
+    // et ré-insérer les plans si vides/incomplets
+    await seedData(db);
+    console.log('Seed/sync effectué');
   } catch (e) {
     console.error('Seed error:', e.message);
   }
@@ -450,8 +457,12 @@ async function seedData(db) {
       exercises:[ex('Balade tranquille (optionnel)',1,'30-45 min',null,0,'Pas d\'objectif — si l\'envie est là')] },
   ];
 
-  // Insert plans
-  if ((await db.query('SELECT COUNT(*) AS cnt FROM training_plans'))[0][0].cnt === 0) {
+  // Plans : supprimer les lignes vides/partielles et ré-insérer si nécessaire
+  await db.query('DELETE FROM training_plans WHERE JSON_LENGTH(exercises) <= 1');
+  const [[{ planWithEx }]] = await db.query('SELECT COUNT(*) AS planWithEx FROM training_plans WHERE JSON_LENGTH(exercises) > 1');
+  if (planWithEx < 3) {
+    // Supprimer tout et recréer les 7 jours complets
+    await db.query('DELETE FROM training_plans');
     for (const p of plans) {
       await db.query(
         'INSERT INTO training_plans (id,day_of_week,name,exercises,notes) VALUES (?,?,?,?,?)',
