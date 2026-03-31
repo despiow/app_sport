@@ -192,6 +192,26 @@ app.delete('/api/weights/:id', wrap(async (req, res) => {
   res.json({ ok: true });
 }));
 
+// ── Diet Template ──────────────────────────────────────────────────────────
+app.get('/api/diet-template', wrap(async (_req, res) => {
+  const [rows] = await db.query('SELECT * FROM diet_days WHERE date = "template"');
+  if (rows[0]) {
+    res.json({ meals: rows[0].meals });
+  } else {
+    res.json({ meals: { breakfast: [], lunch: [], dinner: [], snack: [] } });
+  }
+}));
+
+app.put('/api/diet-template', wrap(async (req, res) => {
+  const { meals } = req.body;
+  await db.query(
+    `INSERT INTO diet_days (date, meals) VALUES ("template", ?)
+     ON DUPLICATE KEY UPDATE meals=VALUES(meals)`,
+    [JSON.stringify(meals)]
+  );
+  res.json({ ok: true });
+}));
+
 // ── Diet ───────────────────────────────────────────────────────────────────
 app.get('/api/diet/:date', wrap(async (req, res) => {
   const [rows] = await db.query('SELECT * FROM diet_days WHERE date=?', [req.params.date]);
