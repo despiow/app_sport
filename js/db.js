@@ -38,7 +38,7 @@ const DB = {
   // ── Init : charge tout depuis l'API au démarrage ───────────────────────────
   async init() {
     try {
-      const [profile, workouts, weights, todayDiet, trainingPlans, perfLogs, dietTemplate] = await Promise.all([
+      const [profile, workouts, weights, todayDiet, trainingPlans, perfLogs, dietTemplates] = await Promise.all([
         _api('/api/profile').then(r => r.json()),
         _api('/api/workouts').then(r => r.json()),
         _api('/api/weights').then(r => r.json()),
