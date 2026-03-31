@@ -439,7 +439,10 @@ async function _searchOFF(query) {
   const box = document.getElementById('food-suggestions');
   if (!box) return;
   try {
-    const res     = await fetch(`/api/food-search?q=${encodeURIComponent(query)}`);
+    const token = localStorage.getItem('sport_token');
+    const res   = await fetch(`/api/food-search?q=${encodeURIComponent(query)}`, {
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+    });
     const results = await res.json();
     if (!results.length) {
       box.innerHTML = '<div class="sug-empty">Aucun résultat</div>';
