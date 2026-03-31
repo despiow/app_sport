@@ -200,28 +200,22 @@ const parseMeals = v => {
 };
 
 app.get('/api/diet-templates', wrap(async (_req, res) => {
-  const [rows] = await db.query(
-    "SELECT date, meals FROM diet_days WHERE date LIKE 'tpl_%'"
-  );
+  const [rows] = await db.query('SELECT day_key, meals FROM diet_templates');
   const out = {};
-  rows.forEach(r => { out[r.date.replace('tpl_', '')] = { meals: parseMeals(r.meals) }; });
+  rows.forEach(r => { out[r.day_key] = { meals: parseMeals(r.meals) }; });
   res.json(out);
 }));
 
 app.get('/api/diet-template/:day', wrap(async (req, res) => {
-  const [rows] = await db.query(
-    'SELECT meals FROM diet_days WHERE date = ?',
-    [`tpl_${req.params.day}`]
-  );
+  const [rows] = await db.query('SELECT meals FROM diet_templates WHERE day_key=?', [req.params.day]);
   res.json({ meals: rows[0] ? parseMeals(rows[0].meals) : { breakfast: [], lunch: [], dinner: [], snack: [] } });
 }));
 
 app.put('/api/diet-template/:day', wrap(async (req, res) => {
   const { meals } = req.body;
   await db.query(
-    `INSERT INTO diet_days (date, meals) VALUES (?, ?)
-     ON DUPLICATE KEY UPDATE meals=VALUES(meals)`,
-    [`tpl_${req.params.day}`, JSON.stringify(meals)]
+    'INSERT INTO diet_templates (day_key, meals) VALUES (?,?) ON DUPLICATE KEY UPDATE meals=VALUES(meals)',
+    [req.params.day, JSON.stringify(meals)]
   );
   res.json({ ok: true });
 }));
@@ -249,8 +243,7 @@ app.put('/api/diet/:date', wrap(async (req, res) => {
 // ── Training Plans ─────────────────────────────────────────────────────────
 const parseExercises = v => {
   if (!v) return [];
-  if (typeof v === 'string') { try { return JSON.parse(v); } catch { return []; } }
-  return v;
+  try { return typeof v === 'string' ? JSON.parse(v) : v; } catch { return []; }
 };
 
 app.get('/api/training-plans', wrap(async (_req, res) => {
@@ -285,7 +278,7 @@ app.delete('/api/training-plans/:id', wrap(async (req, res) => {
 // ── Perf Logs ──────────────────────────────────────────────────────────────
 app.get('/api/perf-logs', wrap(async (_req, res) => {
   const [rows] = await db.query('SELECT * FROM perf_logs ORDER BY date DESC');
-  res.json(rows.map(r => ({ ...r, exercises_done: r.exercises_done || [] })));
+  res.json(rows.map(r => ({ ...r, exercises_done: parseExercises(r.exercises_done) })));
 }));
 
 app.put('/api/perf-logs/:date', wrap(async (req, res) => {
@@ -323,7 +316,7 @@ app.put('/api/perf-logs/:date', wrap(async (req, res) => {
       id VARCHAR(32) PRIMARY KEY,
       day_of_week VARCHAR(20) NOT NULL,
       name VARCHAR(255) NOT NULL,
-      exercises JSON,
+      exercises MEDIUMTEXT,
       notes TEXT,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
@@ -334,11 +327,16 @@ app.put('/api/perf-logs/:date', wrap(async (req, res) => {
       day_of_week VARCHAR(20),
       feeling VARCHAR(10),
       notes TEXT,
-      exercises_done JSON,
+      exercises_done MEDIUMTEXT,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       INDEX idx_perf_date (date)
     )`);
-    console.log('Migration training_plans / perf_logs OK');
+    await db.query(`CREATE TABLE IF NOT EXISTS diet_templates (
+      day_key VARCHAR(20) PRIMARY KEY,
+      meals MEDIUMTEXT,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )`);
+    console.log('Migration tables OK');
   } catch (e) {
     console.error('Migration tables:', e.message);
   }
@@ -457,11 +455,19 @@ async function seedData(db) {
       exercises:[ex('Balade tranquille (optionnel)',1,'30-45 min',null,0,'Pas d\'objectif — si l\'envie est là')] },
   ];
 
-  // Plans : supprimer les lignes vides/partielles et ré-insérer si nécessaire
-  await db.query('DELETE FROM training_plans WHERE JSON_LENGTH(exercises) <= 1');
-  const [[{ planWithEx }]] = await db.query('SELECT COUNT(*) AS planWithEx FROM training_plans WHERE JSON_LENGTH(exercises) > 1');
-  if (planWithEx < 3) {
-    // Supprimer tout et recréer les 7 jours complets
+  // Plans : re-seeder si moins de 3 plans avec des exercices réels
+  const [[{ planCnt }]] = await db.query('SELECT COUNT(*) AS planCnt FROM training_plans');
+  let needPlans = planCnt < 3;
+  if (!needPlans) {
+    // vérifier que les exercises ne sont pas vides
+    const [planRows] = await db.query('SELECT exercises FROM training_plans LIMIT 3');
+    const hasEx = planRows.some(r => {
+      const ex = parseExercises(r.exercises);
+      return Array.isArray(ex) && ex.length > 1;
+    });
+    if (!hasEx) needPlans = true;
+  }
+  if (needPlans) {
     await db.query('DELETE FROM training_plans');
     for (const p of plans) {
       await db.query(
@@ -469,14 +475,17 @@ async function seedData(db) {
         [uid(), p.day, p.name, JSON.stringify(p.exercises), p.notes]
       );
     }
+    console.log('Training plans insérés :', plans.length);
   }
-  // Insert diet templates
+
+  // Diet templates : upsert dans la table dédiée diet_templates
   for (const [dayKey, meals] of Object.entries(diets)) {
     await db.query(
-      `INSERT INTO diet_days (date,meals) VALUES (?,?) ON DUPLICATE KEY UPDATE meals=VALUES(meals)`,
-      [`tpl_${dayKey}`, JSON.stringify(meals)]
+      'INSERT INTO diet_templates (day_key, meals) VALUES (?,?) ON DUPLICATE KEY UPDATE meals=VALUES(meals)',
+      [dayKey, JSON.stringify(meals)]
     );
   }
+  console.log('Diet templates insérés :', Object.keys(diets).length);
 }
 
 // ── Start ──────────────────────────────────────────────────────────────────
