@@ -1,4 +1,4 @@
-const CACHE = 'sport-tracker-v9';
+const CACHE = 'sport-tracker-v10';
 const ASSETS = [
   '/',
   '/index.html',

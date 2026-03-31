@@ -18,32 +18,6 @@ const MEAL_LABELS = {
   snack:     { icon: '🍎', label: 'Collation' },
 };
 
-const FOOD_DB = [
-  { name: 'Petits suisses 3% MG',      calories:  72, protein: 7.5, carbs:  4,   fat: 3.2 },
-  { name: 'Pain au maïs',              calories: 230, protein: 5,   carbs: 50,   fat: 2   },
-  { name: 'Blanc de poulet grillé',    calories: 165, protein: 31,  carbs:  0,   fat: 3.6 },
-  { name: 'Brocolis vapeur',           calories:  34, protein: 2.8, carbs:  6.6, fat: 0.4 },
-  { name: 'Courgettes',                calories:  17, protein: 1.2, carbs:  3.1, fat: 0.3 },
-  { name: 'Nouilles de konjac',        calories:   6, protein: 0.2, carbs:  1.2, fat: 0.1 },
-  { name: 'Huile pépins de raisin',    calories: 900, protein: 0,   carbs:  0,   fat: 100 },
-  { name: 'Fromage blanc 0%',          calories:  45, protein: 8,   carbs:  4,   fat: 0.2 },
-  { name: 'Oeufs entiers',             calories: 155, protein: 13,  carbs:  1.1, fat: 11  },
-  { name: 'Épinards',                  calories:  23, protein: 2.9, carbs:  3.6, fat: 0.4 },
-  { name: 'Riz blanc cuit',            calories: 130, protein: 2.7, carbs: 28,   fat: 0.3 },
-  { name: 'Haricots verts',            calories:  31, protein: 1.8, carbs:  6.6, fat: 0.2 },
-  { name: 'Thon naturel (conserve)',   calories: 116, protein: 26,  carbs:  0,   fat: 1   },
-  { name: 'Tomates',                   calories:  18, protein: 0.9, carbs:  3.9, fat: 0.2 },
-  { name: 'Concombre',                 calories:  12, protein: 0.6, carbs:  2,   fat: 0.1 },
-  { name: 'Salade verte',              calories:  13, protein: 1.4, carbs:  1.8, fat: 0.2 },
-  { name: 'Cuisse de poulet (sans peau)', calories: 155, protein: 26, carbs: 0,  fat: 5   },
-  { name: 'Poivrons',                  calories:  31, protein: 1,   carbs:  6,   fat: 0.3 },
-  { name: 'Ratatouille maison',        calories:  55, protein: 1.5, carbs:  8,   fat: 2   },
-  { name: 'Amandes',                   calories: 579, protein: 21,  carbs: 22,   fat: 50  },
-  { name: 'Escalope de dinde',         calories: 135, protein: 30,  carbs:  0,   fat: 1   },
-  { name: 'Blanc de poulet',           calories: 165, protein: 31,  carbs:  0,   fat: 3.6 },
-  { name: 'Légumes verts vapeur',      calories:  30, protein: 2.5, carbs:  5,   fat: 0.3 },
-  { name: 'Poêlée courgettes/poivrons',calories: 22, protein: 1.1, carbs:  4.5, fat: 0.3 },
-];
 
 function todayDayKey() { return DAYS[(new Date().getDay() + 6) % 7].key; }
 
