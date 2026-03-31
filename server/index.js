@@ -192,22 +192,33 @@ app.delete('/api/weights/:id', wrap(async (req, res) => {
   res.json({ ok: true });
 }));
 
-// ── Diet Template ──────────────────────────────────────────────────────────
-app.get('/api/diet-template', wrap(async (_req, res) => {
-  const [rows] = await db.query('SELECT * FROM diet_days WHERE date = "template"');
-  if (rows[0]) {
-    res.json({ meals: rows[0].meals });
-  } else {
-    res.json({ meals: { breakfast: [], lunch: [], dinner: [], snack: [] } });
-  }
+// ── Diet Templates (par jour de semaine) ───────────────────────────────────
+app.get('/api/diet-templates', wrap(async (_req, res) => {
+  const [rows] = await db.query(
+    "SELECT date, meals FROM diet_days WHERE date LIKE 'tpl_%'"
+  );
+  const out = {};
+  rows.forEach(r => { out[r.date.replace('tpl_', '')] = { meals: r.meals }; });
+  res.json(out);
 }));
 
-app.put('/api/diet-template', wrap(async (req, res) => {
+app.get('/api/diet-template/:day', wrap(async (req, res) => {
+  const [rows] = await db.query(
+    'SELECT meals FROM diet_days WHERE date = ?',
+    [`tpl_${req.params.day}`]
+  );
+  res.json(rows[0]
+    ? { meals: rows[0].meals }
+    : { meals: { breakfast: [], lunch: [], dinner: [], snack: [] } }
+  );
+}));
+
+app.put('/api/diet-template/:day', wrap(async (req, res) => {
   const { meals } = req.body;
   await db.query(
-    `INSERT INTO diet_days (date, meals) VALUES ("template", ?)
+    `INSERT INTO diet_days (date, meals) VALUES (?, ?)
      ON DUPLICATE KEY UPDATE meals=VALUES(meals)`,
-    [JSON.stringify(meals)]
+    [`tpl_${req.params.day}`, JSON.stringify(meals)]
   );
   res.json({ ok: true });
 }));
@@ -322,7 +333,140 @@ app.put('/api/perf-logs/:date', wrap(async (req, res) => {
   } catch (e) {
     console.error('Migration tables:', e.message);
   }
+
+  // ── Seed initial si tables vides ──────────────────────────────────────
+  try {
+    const [[{ cnt: planCnt }]] = await db.query('SELECT COUNT(*) AS cnt FROM training_plans');
+    const [[{ cnt: tplCnt  }]] = await db.query("SELECT COUNT(*) AS cnt FROM diet_days WHERE date LIKE 'tpl_%'");
+    if (planCnt === 0 || tplCnt === 0) {
+      await seedData(db);
+      console.log('Seed initial effectué');
+    }
+  } catch (e) {
+    console.error('Seed error:', e.message);
+  }
 })();
+
+// ── Seed data ──────────────────────────────────────────────────────────────
+async function seedData(db) {
+  const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
+  const F = {
+    petits_suisses:    { name:'Petits suisses 3% MG',          calories: 72, protein:7.5, carbs: 4.0, fat: 3.2 },
+    pain_mais:         { name:'Pain au maïs',                   calories:230, protein:5.0, carbs:50.0, fat: 2.0 },
+    blanc_poulet:      { name:'Blanc de poulet grillé',         calories:165, protein:31,  carbs: 0.0, fat: 3.6 },
+    brocoli:           { name:'Brocolis vapeur',                calories: 34, protein:2.8, carbs: 6.6, fat: 0.4 },
+    courgette:         { name:'Courgettes',                     calories: 17, protein:1.2, carbs: 3.1, fat: 0.3 },
+    konjac:            { name:'Nouilles de konjac',             calories:  6, protein:0.2, carbs: 1.2, fat: 0.1 },
+    huile:             { name:'Huile pépins de raisin',         calories:900, protein:0.0, carbs: 0.0, fat:100  },
+    fb0:               { name:'Fromage blanc 0%',               calories: 45, protein:8.0, carbs: 4.0, fat: 0.2 },
+    oeuf:              { name:'Oeufs entiers',                  calories:155, protein:13,  carbs: 1.1, fat:11   },
+    epinards:          { name:'Épinards',                       calories: 23, protein:2.9, carbs: 3.6, fat: 0.4 },
+    riz:               { name:'Riz blanc cuit',                 calories:130, protein:2.7, carbs:28.0, fat: 0.3 },
+    haricots:          { name:'Haricots verts',                 calories: 31, protein:1.8, carbs: 6.6, fat: 0.2 },
+    thon:              { name:'Thon naturel (conserve)',        calories:116, protein:26,  carbs: 0.0, fat: 1.0 },
+    tomate:            { name:'Tomates',                        calories: 18, protein:0.9, carbs: 3.9, fat: 0.2 },
+    concombre:         { name:'Concombre',                      calories: 12, protein:0.6, carbs: 2.0, fat: 0.1 },
+    salade:            { name:'Salade verte',                   calories: 13, protein:1.4, carbs: 1.8, fat: 0.2 },
+    cuisse_poulet:     { name:'Cuisse de poulet (sans peau)',   calories:155, protein:26,  carbs: 0.0, fat: 5.0 },
+    ratatouille:       { name:'Ratatouille maison',             calories: 55, protein:1.5, carbs: 8.0, fat: 2.0 },
+    amandes:           { name:'Amandes',                        calories:579, protein:21,  carbs:22.0, fat:50   },
+    dinde:             { name:'Escalope de dinde',              calories:135, protein:30,  carbs: 0.0, fat: 1.0 },
+    legumes_v:         { name:'Légumes verts vapeur',           calories: 30, protein:2.5, carbs: 5.0, fat: 0.3 },
+    courgette_poivron: { name:'Poêlée courgettes / poivrons',  calories: 22, protein:1.1, carbs: 4.5, fat: 0.3 },
+  };
+  const f = (key, qty) => ({ ...F[key], qty });
+
+  const diets = {
+    lundi:    { breakfast:[f('petits_suisses',120),f('pain_mais',50)],
+                lunch:[f('blanc_poulet',160),f('brocoli',200),f('courgette',200),f('konjac',250),f('huile',9),f('fb0',100)],
+                snack:[f('petits_suisses',120)],
+                dinner:[f('oeuf',180),f('epinards',300),f('konjac',250),f('huile',9)] },
+    mardi:    { breakfast:[f('petits_suisses',120),f('pain_mais',60)],
+                lunch:[f('blanc_poulet',180),f('riz',140),f('haricots',200),f('huile',9),f('fb0',150)],
+                snack:[f('petits_suisses',120)],
+                dinner:[f('cuisse_poulet',160),f('courgette_poivron',250),f('konjac',250),f('huile',9)] },
+    mercredi: { breakfast:[f('petits_suisses',120),f('pain_mais',50)],
+                lunch:[f('thon',160),f('tomate',100),f('concombre',80),f('salade',40),f('konjac',250),f('huile',9),f('fb0',100)],
+                snack:[f('petits_suisses',120)],
+                dinner:[f('blanc_poulet',150),f('courgette_poivron',300),f('konjac',250),f('huile',9)] },
+    jeudi:    { breakfast:[f('petits_suisses',120),f('pain_mais',60)],
+                lunch:[f('blanc_poulet',180),f('riz',140),f('brocoli',100),f('haricots',100),f('huile',9),f('fb0',150)],
+                snack:[f('petits_suisses',120)],
+                dinner:[f('cuisse_poulet',150),f('ratatouille',250),f('konjac',250),f('huile',9)] },
+    vendredi: { breakfast:[f('petits_suisses',120),f('pain_mais',50)],
+                lunch:[f('blanc_poulet',180),f('haricots',200),f('salade',100),f('concombre',100),f('konjac',250),f('huile',9),f('fb0',100)],
+                snack:[f('petits_suisses',120)],
+                dinner:[f('blanc_poulet',150),f('epinards',300),f('konjac',250),f('huile',9)] },
+    samedi:   { breakfast:[f('petits_suisses',120),f('pain_mais',60)],
+                lunch:[f('blanc_poulet',200),f('riz',140),f('legumes_v',200),f('huile',9),f('fb0',150)],
+                snack:[f('petits_suisses',120)],
+                dinner:[f('cuisse_poulet',160),f('ratatouille',250),f('konjac',250),f('huile',9)] },
+    dimanche: { breakfast:[f('petits_suisses',120),f('pain_mais',80)],
+                lunch:[f('blanc_poulet',180),f('riz',160),f('legumes_v',200),f('huile',9),f('fb0',150)],
+                snack:[f('petits_suisses',120),f('amandes',20)],
+                dinner:[f('dinde',160),f('legumes_v',250),f('riz',70),f('huile',9)] },
+  };
+
+  const ex = (name,sets,reps,weight,rest,notes='') =>
+    ({id:uid(),name,sets,reps:String(reps),weight:weight||null,rest,notes});
+
+  const plans = [
+    { day:'lundi',    name:'Repos — Marche active',      notes:'Marche extérieure 45-60 min. Récupération musculaire. ~220 kcal.',
+      exercises:[ex('Marche extérieure',1,'45-60 min',null,0,'Parc, quartier — rythme confortable')] },
+    { day:'mardi',    name:'Séance A — Push (6h30)',      notes:'Séance poussée. Tapis 45 min après (5%/4,5km/h). ~300 kcal cardio.',
+      exercises:[
+        ex('Développé couché barre',4,'8-10',null,90,'Descendre lentement, serrer en haut'),
+        ex('Développé militaire',3,'10-12',null,90,'Gainage du tronc, pas de cambrure'),
+        ex('Pec deck / Écarté',3,'12-15',null,60,'Étirement complet, squeeze en haut'),
+        ex('Extension triceps poulie',3,'12-15',null,60,'Coudes fixes'),
+        ex('Gainage planche',3,'45 sec',null,60,'Bassin neutre, respiration'),
+        ex('Pont fessier',3,'15',null,60,'Serrer fessiers en haut, pause 1 sec'),
+        ex('Tapis 5% / 4,5km/h',1,'45 min',null,0,'Cardio brûle-graisses post-séance'),
+      ]},
+    { day:'mercredi', name:'Repos — Marche active',      notes:'Récupération active. Marche 45-60 min.',
+      exercises:[ex('Marche extérieure',1,'45-60 min',null,0,'Récupération — rythme tranquille')] },
+    { day:'jeudi',    name:'Séance B — Pull (6h30)',      notes:'Séance tirée. Tapis 45 min après (5%/4,5km/h). ~300 kcal cardio.',
+      exercises:[
+        ex('Tirage poulie haute',4,'10-12',null,90,'Poitrine vers la barre, coudes le long du corps'),
+        ex('Rowing barre',4,'10-12',null,90,'Dos plat, coudes serrés'),
+        ex('Curl biceps haltères',3,'12',null,60,'Pas de balancement, supination complète'),
+        ex('Face pull',3,'15',null,60,'Tirage vers le visage, rotation externe'),
+        ex('Gainage oblique',3,'30 sec',null,60,'Chaque côté — bassin aligné'),
+        ex('Tapis 5% / 4,5km/h',1,'45 min',null,0,'Cardio brûle-graisses post-séance'),
+      ]},
+    { day:'vendredi', name:'Repos — Marche active',      notes:'3e marche. Creuse le déficit avant samedi.',
+      exercises:[ex('Marche extérieure',1,'45-60 min',null,0,'Récupération — préparer la séance samedi')] },
+    { day:'samedi',   name:'Séance C — Bas du corps (6h30)', notes:'Grande séance jambes. Tapis 45 min après. ~300 kcal cardio.',
+      exercises:[
+        ex('Presse cuisses',4,'12-15',null,90,'Amplitude complète, genoux dans l\'axe'),
+        ex('Leg curl allongé',3,'12-15',null,90,'Descente lente, pause en bas'),
+        ex('Abducteurs machine',3,'15-20',null,60,'Mouvement contrôlé'),
+        ex('Mollets à la presse',4,'15-20',null,60,'Descendre au max, monter sur pointe'),
+        ex('Pont fessier',3,'15',null,60,'Pause 1 sec en haut, serrage fessiers'),
+        ex('Planche',3,'45 sec',null,60,'Gainage total'),
+        ex('Tapis 5% / 4,5km/h',1,'45 min',null,0,'Cardio brûle-graisses post-séance'),
+      ]},
+    { day:'dimanche', name:'Repos complet — Recharge',   notes:'Repos total. 2100 kcal. Meal prep semaine. Balade optionnelle.',
+      exercises:[ex('Balade tranquille (optionnel)',1,'30-45 min',null,0,'Pas d\'objectif — si l\'envie est là')] },
+  ];
+
+  // Insert plans
+  if ((await db.query('SELECT COUNT(*) AS cnt FROM training_plans'))[0][0].cnt === 0) {
+    for (const p of plans) {
+      await db.query(
+        'INSERT INTO training_plans (id,day_of_week,name,exercises,notes) VALUES (?,?,?,?,?)',
+        [uid(), p.day, p.name, JSON.stringify(p.exercises), p.notes]
+      );
+    }
+  }
+  // Insert diet templates
+  for (const [dayKey, meals] of Object.entries(diets)) {
+    await db.query(
+      `INSERT INTO diet_days (date,meals) VALUES (?,?) ON DUPLICATE KEY UPDATE meals=VALUES(meals)`,
+      [`tpl_${dayKey}`, JSON.stringify(meals)]
+    );
+  }
+}
 
 // ── Start ──────────────────────────────────────────────────────────────────
 app.listen(PORT, () => console.log(`Sport API listening on port ${PORT}`));

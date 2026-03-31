@@ -1228,6 +1228,20 @@ datalist { display: none; }
    NUTRITION REFONTE  –  nouveaux styles
    ══════════════════════════════════════════════════════════════════════════ */
 
+/* ─── Badge type de jour ─────────────────────────────────────────────────── */
+.day-type-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 14px;
+}
+.day-type-badge.bas      { background: var(--primary-dim);  color: var(--primary-bright); }
+.day-type-badge.modere   { background: var(--success-dim);  color: var(--success); }
+.day-type-badge.recharge { background: var(--warning-dim);  color: var(--warning); }
+
 /* ─── Diet Tabs ──────────────────────────────────────────────────────────── */
 .diet-tabs {
   display: flex;
