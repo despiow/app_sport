@@ -281,7 +281,7 @@ function macroBar(label, val, target, cls) {
 
 function renderFoodModal() {
   return `
-    <div class="modal-overlay" id="modal-food" style="display:none">
+    <div class="modal-overlay centered" id="modal-food" style="display:none">
       <div class="modal">
         <div class="modal-header">
           <h2 id="modal-food-title">Ajouter un aliment</h2>

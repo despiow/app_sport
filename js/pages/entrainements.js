@@ -36,7 +36,7 @@ export function renderEntrainements() {
     </div>
 
     <!-- Modal : Créer / Renommer le programme -->
-    <div class="modal-overlay" id="modal-plan" style="display:none">
+    <div class="modal-overlay centered" id="modal-plan" style="display:none">
       <div class="modal">
         <div class="modal-header">
           <h2 id="modal-plan-title">Nouveau programme</h2>
@@ -58,7 +58,7 @@ export function renderEntrainements() {
     </div>
 
     <!-- Modal : Ajouter / Modifier exercice -->
-    <div class="modal-overlay" id="modal-exercise" style="display:none">
+    <div class="modal-overlay centered" id="modal-exercise" style="display:none">
       <div class="modal">
         <div class="modal-header">
           <h2 id="modal-ex-title">Exercice</h2>
