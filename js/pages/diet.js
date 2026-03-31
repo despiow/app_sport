@@ -288,37 +288,55 @@ function renderFoodModal() {
           <button class="modal-close" id="btn-close-food">✕</button>
         </div>
         <div class="modal-body">
-          <div class="form-group">
-            <input type="text" id="food-search" placeholder="🔍 Rechercher…" class="food-search-input">
-            <div id="food-suggestions" class="food-suggestions"></div>
-          </div>
           <input type="hidden" id="ff-source">
           <input type="hidden" id="ff-meal">
           <input type="hidden" id="ff-date">
           <input type="hidden" id="ff-day">
+
+          <!-- Recherche Open Food Facts -->
+          <div class="form-group" style="position:relative">
+            <input type="text" id="food-search" placeholder="🔍 Rechercher un aliment…" class="food-search-input" autocomplete="off">
+            <div id="food-suggestions" class="food-suggestions"></div>
+          </div>
+
+          <!-- Nom sélectionné -->
           <div class="form-group">
             <label>Aliment</label>
-            <input type="text" id="ff-name" placeholder="Nom" required>
+            <input type="text" id="ff-name" placeholder="Nom de l'aliment" required>
           </div>
+
+          <!-- Quantité -->
+          <div class="form-group">
+            <label>Quantité (g)</label>
+            <input type="number" id="ff-qty" value="100" min="1" inputmode="numeric">
+          </div>
+
+          <!-- Valeurs pour 100g -->
+          <p class="ff-section-label">Valeurs pour 100g</p>
           <div class="form-row">
-            <div class="form-group"><label>Quantité (g)</label>
-              <input type="number" id="ff-qty" value="100" min="1" inputmode="numeric">
-            </div>
-            <div class="form-group"><label>Calories/100g</label>
+            <div class="form-group"><label>Kcal</label>
               <input type="number" id="ff-cal" placeholder="—" min="0" inputmode="numeric">
             </div>
-          </div>
-          <div class="form-row">
-            <div class="form-group"><label>Prot. /100g</label>
+            <div class="form-group"><label>Protéines</label>
               <input type="number" id="ff-prot" placeholder="—" min="0" step="0.1" inputmode="decimal">
             </div>
-            <div class="form-group"><label>Gluc. /100g</label>
+            <div class="form-group"><label>Glucides</label>
               <input type="number" id="ff-carb" placeholder="—" min="0" step="0.1" inputmode="decimal">
             </div>
-            <div class="form-group"><label>Lip. /100g</label>
+            <div class="form-group"><label>Lipides</label>
               <input type="number" id="ff-fat" placeholder="—" min="0" step="0.1" inputmode="decimal">
             </div>
           </div>
+
+          <!-- Aperçu macros calculées -->
+          <div id="ff-macro-preview" class="ff-macro-preview" style="display:none">
+            <span class="ff-prev-label">Pour <strong id="ff-qty-lbl">100</strong>g :</span>
+            <span class="ff-prev-chip energy">⚡ <span id="prev-cal">0</span> kcal</span>
+            <span class="ff-prev-chip prot">P <span id="prev-prot">0</span>g</span>
+            <span class="ff-prev-chip carb">G <span id="prev-carb">0</span>g</span>
+            <span class="ff-prev-chip fat">L <span id="prev-fat">0</span>g</span>
+          </div>
+
           <div class="modal-footer" style="margin-top:12px;padding:0">
             <button class="btn btn-outline" id="btn-cancel-food">Annuler</button>
             <button class="btn btn-primary" id="btn-submit-food">Ajouter</button>
@@ -409,19 +427,17 @@ export function initDiet() {
   });
   document.getElementById('btn-submit-food').addEventListener('click', submitFood);
 
-  // Recherche
+  // Recherche Open Food Facts (debounced)
+  let _searchTimer = null;
   document.getElementById('food-search').addEventListener('input', e => {
-    const q   = e.target.value.toLowerCase().trim();
+    const q = e.target.value.trim();
     const box = document.getElementById('food-suggestions');
-    if (!q) { box.innerHTML = ''; return; }
-    const matches = FOOD_DB.filter(f => f.name.toLowerCase().includes(q)).slice(0, 7);
-    box.innerHTML = matches.map(f => `
-      <div class="food-suggestion-item" data-food='${JSON.stringify(f)}'>
-        <span>${escHtml(f.name)}</span>
-        <span class="sug-kcal">${f.calories} kcal · P${f.protein}g G${f.carbs}g L${f.fat}g</span>
-      </div>
-    `).join('');
+    clearTimeout(_searchTimer);
+    if (q.length < 2) { box.innerHTML = ''; return; }
+    box.innerHTML = '<div class="sug-loading">Recherche en cours…</div>';
+    _searchTimer = setTimeout(() => _searchOFF(q), 450);
   });
+
   document.getElementById('food-suggestions').addEventListener('click', e => {
     const item = e.target.closest('.food-suggestion-item');
     if (!item) return;
@@ -434,7 +450,65 @@ export function initDiet() {
     document.getElementById('food-search').value = '';
     document.getElementById('food-suggestions').innerHTML = '';
     document.getElementById('ff-qty').focus();
+    _updateMacroPreview();
   });
+
+  // Aperçu macros en temps réel
+  ['ff-qty','ff-cal','ff-prot','ff-carb','ff-fat'].forEach(id =>
+    document.getElementById(id).addEventListener('input', _updateMacroPreview)
+  );
+}
+
+// ─── Recherche Open Food Facts ────────────────────────────────────────────
+
+async function _searchOFF(query) {
+  const box = document.getElementById('food-suggestions');
+  if (!box) return;
+  try {
+    const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&json=1&page_size=10&fields=product_name,nutriments&lc=fr`;
+    const res  = await fetch(url);
+    const data = await res.json();
+    const products = (data.products || []).filter(p =>
+      p.product_name && p.nutriments?.['energy-kcal_100g'] != null
+    );
+    if (!products.length) {
+      box.innerHTML = '<div class="sug-empty">Aucun résultat</div>';
+      return;
+    }
+    box.innerHTML = products.slice(0, 8).map(p => {
+      const n    = p.nutriments;
+      const cal  = Math.round(n['energy-kcal_100g']   || 0);
+      const prot = Math.round((n['proteins_100g']      || 0) * 10) / 10;
+      const carb = Math.round((n['carbohydrates_100g'] || 0) * 10) / 10;
+      const fat  = Math.round((n['fat_100g']           || 0) * 10) / 10;
+      const food = { name: p.product_name, calories: cal, protein: prot, carbs: carb, fat: fat };
+      return `
+        <div class="food-suggestion-item" data-food='${JSON.stringify(food).replace(/'/g,"&#39;")}'>
+          <span class="sug-name">${escHtml(p.product_name)}</span>
+          <span class="sug-kcal">${cal} kcal · P${prot}g G${carb}g L${fat}g</span>
+        </div>`;
+    }).join('');
+  } catch {
+    box.innerHTML = '<div class="sug-empty">Erreur réseau — vérifier la connexion</div>';
+  }
+}
+
+function _updateMacroPreview() {
+  const qty  = parseFloat(document.getElementById('ff-qty')?.value)  || 0;
+  const cal  = parseFloat(document.getElementById('ff-cal')?.value)  || 0;
+  const prot = parseFloat(document.getElementById('ff-prot')?.value) || 0;
+  const carb = parseFloat(document.getElementById('ff-carb')?.value) || 0;
+  const fat  = parseFloat(document.getElementById('ff-fat')?.value)  || 0;
+  const prev = document.getElementById('ff-macro-preview');
+  if (!prev) return;
+  if (!cal && !prot && !carb && !fat) { prev.style.display = 'none'; return; }
+  const q = qty / 100;
+  prev.style.display = 'flex';
+  document.getElementById('ff-qty-lbl').textContent  = qty || 100;
+  document.getElementById('prev-cal').textContent   = Math.round(cal  * q);
+  document.getElementById('prev-prot').textContent  = Math.round(prot * q);
+  document.getElementById('prev-carb').textContent  = Math.round(carb * q);
+  document.getElementById('prev-fat').textContent   = Math.round(fat  * q);
 }
 
 // ─── Modal ────────────────────────────────────────────────────────────────
@@ -451,6 +525,8 @@ function openFoodModal(source, meal, date, dayKey) {
   document.getElementById('ff-qty').value = '100';
   document.getElementById('food-search').value = '';
   document.getElementById('food-suggestions').innerHTML = '';
+  const prev = document.getElementById('ff-macro-preview');
+  if (prev) prev.style.display = 'none';
   document.getElementById('modal-food').style.display = 'flex';
   setTimeout(() => document.getElementById('food-search').focus(), 60);
 }

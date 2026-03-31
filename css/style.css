@@ -814,26 +814,66 @@ textarea { resize: vertical; min-height: 68px; }
 .fi-cals  { font-weight: 700; color: var(--primary-bright); min-width: 65px; text-align: right; }
 .fi-macros { font-size: 11px; color: var(--text-dim); min-width: 120px; }
 
-.food-search-input { margin-bottom: 8px; }
+.food-search-input { margin-bottom: 4px; }
 .food-suggestions {
   background: var(--surface-solid);
   border-radius: var(--radius-sm);
   overflow: hidden;
   border: 1px solid var(--border2);
-  margin-bottom: 13px;
+  margin-bottom: 8px;
   box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+  max-height: 220px;
+  overflow-y: auto;
 }
 .food-suggestion-item {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 11px 14px;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 14px;
   cursor: pointer;
   font-size: 14px;
   border-bottom: 1px solid var(--border);
   transition: background 0.15s;
   font-weight: 500;
 }
+.sug-name { font-size: 13px; font-weight: 600; }
+.sug-loading, .sug-empty {
+  padding: 12px 14px;
+  font-size: 13px;
+  color: var(--text-muted);
+  text-align: center;
+}
+.ff-section-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  margin: 8px 0 6px;
+}
+.ff-macro-preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  background: rgba(139,92,246,0.1);
+  border: 1px solid rgba(139,92,246,0.3);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  margin: 8px 0 4px;
+  font-size: 13px;
+}
+.ff-prev-label { color: var(--text-muted); font-size: 12px; flex: 0 0 100%; margin-bottom: 4px; }
+.ff-prev-chip {
+  padding: 3px 8px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.ff-prev-chip.energy { background: rgba(251,191,36,0.15); color: #fbbf24; }
+.ff-prev-chip.prot   { background: rgba(139,92,246,0.2);  color: var(--primary-light); }
+.ff-prev-chip.carb   { background: rgba(16,185,129,0.15); color: var(--success); }
+.ff-prev-chip.fat    { background: rgba(239,68,68,0.15);  color: #f87171; }
 .food-suggestion-item:last-child { border-bottom: none; }
 .food-suggestion-item:hover { background: var(--surface2); }
 .text-muted { color: var(--text-muted); }
