@@ -65,19 +65,23 @@ app.use('/api', (req, res, next) => {
 app.get('/api/food-search', wrap(async (req, res) => {
   const q = String(req.query.q || '').trim();
   if (q.length < 2) return res.json([]);
-  const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&json=1&page_size=10&fields=product_name,nutriments&lc=fr`;
+  const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&json=1&page_size=24&fields=product_name,brands,nutriments&sort_by=popularity&lc=fr&cc=fr`;
   const r = await fetch(url, { headers: { 'User-Agent': 'SportTrackerApp/1.0' } });
   const data = await r.json();
   const results = (data.products || [])
     .filter(p => p.product_name && p.nutriments?.['energy-kcal_100g'] != null)
-    .slice(0, 8)
-    .map(p => ({
-      name:     p.product_name,
-      calories: Math.round(p.nutriments['energy-kcal_100g']   || 0),
-      protein:  Math.round((p.nutriments['proteins_100g']      || 0) * 10) / 10,
-      carbs:    Math.round((p.nutriments['carbohydrates_100g'] || 0) * 10) / 10,
-      fat:      Math.round((p.nutriments['fat_100g']           || 0) * 10) / 10,
-    }));
+    .slice(0, 12)
+    .map(p => {
+      const brand = p.brands ? p.brands.split(',')[0].trim() : '';
+      const label = brand ? `${p.product_name} — ${brand}` : p.product_name;
+      return {
+        name:     label,
+        calories: Math.round(p.nutriments['energy-kcal_100g']   || 0),
+        protein:  Math.round((p.nutriments['proteins_100g']      || 0) * 10) / 10,
+        carbs:    Math.round((p.nutriments['carbohydrates_100g'] || 0) * 10) / 10,
+        fat:      Math.round((p.nutriments['fat_100g']           || 0) * 10) / 10,
+      };
+    });
   res.json(results);
 }));
 
